@@ -1,0 +1,80 @@
+@startuml
+title PointerPro Animate Service Architecture
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+
+actor User
+
+package "animate_client" as client {
+  component "Input Parser" as ClientInput
+  component "Client Connection" as ClientConnection
+  component "Output Handler" as ClientOutput
+  component "Auth State" as ClientAuth
+}
+
+package "Shared Protocol" as common {
+  component "Protocol Messages" as Protocol
+  component "Shared Helpers" as Util
+}
+
+package "animate_server" as server {
+  component "Server Connection" as ServerConnection
+  component "Authentication" as Auth
+  component "Client State" as ClientState
+  component "Request Queue" as Queue
+  component "Thread Pool" as ThreadPool
+  component "RPC Parser" as RpcParser
+  component "RPC Executor" as RpcExecutor
+  component "Handle Table" as Handles
+  component "Generator" as Generator
+  component "Cleanup" as Cleanup
+}
+
+package "Provided Library" as lib {
+  component "libanimate" as Libanimate
+}
+
+queue "Request FIFO" as RequestFIFO
+queue "Response FIFO" as ResponseFIFO
+database "users.txt" as UsersFile
+file "Generated\n.dat / .mp4 / .log" as GeneratedFiles
+
+User --> ClientInput
+ClientInput --> ClientAuth
+ClientInput --> ClientConnection
+ClientConnection --> RequestFIFO
+ResponseFIFO --> ClientConnection
+ClientConnection --> ClientOutput
+ClientOutput --> User
+
+ClientInput --> Protocol
+ClientConnection --> Protocol
+ServerConnection --> Protocol
+RpcParser --> Protocol
+
+RequestFIFO --> ServerConnection
+ServerConnection --> Auth
+Auth --> UsersFile
+ServerConnection --> ClientState
+ServerConnection --> Queue
+
+Queue --> ThreadPool
+ThreadPool --> RpcParser
+RpcParser --> RpcExecutor
+
+RpcExecutor --> ClientState
+RpcExecutor --> Handles
+RpcExecutor --> Generator
+RpcExecutor --> Libanimate
+
+Generator --> Libanimate
+Generator --> GeneratedFiles
+
+Cleanup --> ClientState
+Cleanup --> Handles
+
+ServerConnection --> ResponseFIFO
+
+@enduml
